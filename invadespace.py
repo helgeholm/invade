@@ -102,8 +102,8 @@ class InvaderZap(object):
 class Invaders(object):
     def __init__(self, window, zap, invadersExp):
         self.explode = invadersExp
-        self.ROWS = 8
-        self.COLS = 12
+        self.ROWS = 6
+        self.COLS = 8
         self.zap = zap
         self.w = window
         self.invader0 = [
@@ -119,7 +119,7 @@ class Invaders(object):
         self.zapcnt = 100
         self.vx = self.iw/4
         self.vy = -self.ih
-        self.lim_l, self.lim_r = self.calcLimits()
+        self.calcWidth()
 
     def collide(self, xl, yl, w, h):
         xh, yh = xl + w, yl + h
@@ -136,15 +136,27 @@ class Invaders(object):
                 if self.il[i_r][i_c]:
                     self.il[i_r][i_c] = False
                     self.explode.boom(i_xl, i_yl)
-                    # TODO: check boundaries
+                    self.reduceSizeIfNeeded()
                     return True
         return False
 
-    def calcLimits(self):
-        totWidth = len(self.il[0]) * (self.iw + self.pad)
-        lim_r = self.w.width - totWidth
-        lim_l = self.pad * 2
-        return lim_l, lim_r
+    def reduceSizeIfNeeded(self):
+        for i_c in [0, -1]:
+            if not sum([self.il[i_r][i_c]
+                        for i_r in range(self.ROWS)]):
+                self.stripCol(i_c)
+                self.reduceSizeIfNeeded()
+
+    def stripCol(self, i_c):
+        self.COLS -= 1
+        for r in self.il:
+            r.pop(i_c)
+        if i_c == 0:
+            self.x += self.iw + self.pad
+        self.calcWidth()
+
+    def calcWidth(self):
+        self.totWidth = len(self.il[0]) * (self.iw + self.pad) - self.pad
 
     def getBottomOfRandomRow(self):
         candidates = []
@@ -165,7 +177,7 @@ class Invaders(object):
         if self.bipcnt == 0:
             invaders.bipbop = (invaders.bipbop + 1)%2
             self.x += self.vx
-            if (self.x > self.lim_r) or (self.x < self.lim_l):
+            if (self.x + self.totWidth > self.w.width) or (self.x < 0):
                 self.vx *= -1
                 self.x += self.vx
                 self.y += self.vy
