@@ -110,7 +110,7 @@ class Invaders(object):
             pyglet.resource.image('invader01.png'),
             pyglet.resource.image('invader02.png')]
         self.iw, self.ih = self.invader0[0].width, self.invader0[0].height
-        self.pad = 4
+        self.pad = 16
         self.x = 2 * self.pad
         self.y = self.w.height - (self.ih + 2 * self.pad)
         self.il = [[True]*self.COLS for _ in [None]*self.ROWS]
