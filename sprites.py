@@ -4,19 +4,20 @@ import pyglet
 from pyglet.window import key
 
 class Player(object):
-    def __init__(self, window, gun):
+    def __init__(self, window, gun, keys):
         self.w = window
         self.g = gun
         self.s = pyglet.resource.image('player.png')
         self.x, self.y = self.w.width/2, 4
-    def update(self, keys):
+        self.keys = keys
+    def update(self):
         vx = 0
-        if keys[key.LEFT]: vx -= 10
-        if keys[key.RIGHT]: vx += 10
+        if self.keys[key.LEFT]: vx -= 10
+        if self.keys[key.RIGHT]: vx += 10
         self.x += vx
         self.x = max(self.x, 0)
         self.x = min(self.x, self.w.width - self.s.width)
-        if keys[key.SPACE]: self._pewpew()
+        if self.keys[key.SPACE]: self._pewpew()
     def paint(self):
         self.s.blit(self.x, self.y)
     def _pewpew(self):
@@ -35,7 +36,7 @@ class Gun(object):
         self.x = x - self.cx
         self.y = y - self.cy
         self.firing = True
-    def update(self, keys):
+    def update(self):
         if not self.firing: return
         self.y += 15
         if self.y > self.w.height:
@@ -67,7 +68,7 @@ class InvaderExplode(object):
         s = self.sm[self.st]['s']
         if not s: return
         s.blit(self.x, self.y)
-    def update(self, keys):
+    def update(self):
         if not self.st_c: return
         self.st_c -= 1
         if self.st_c: return
@@ -81,7 +82,7 @@ class InvaderZap(object):
         self.xyl = []
     def fire(self, x, y):
         self.xyl.append([x - self.cx, y - self.cy])
-    def update(self, keys):
+    def update(self):
         xyl2 = []
         for p in self.xyl:
             p[1] -= 10
@@ -166,7 +167,7 @@ class Invaders(object):
         x += self.invader0[0].width / 2
         return x, y
 
-    def update(self, keys):
+    def update(self):
         self.bipcnt = (self.bipcnt + 1)%20
         if self.bipcnt == 0:
             self.bipbop = (self.bipbop + 1)%2

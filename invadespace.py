@@ -14,7 +14,7 @@ zap = InvaderZap(window)
 invadersExp = InvaderExplode()
 invaders = Invaders(window, zap, invadersExp)
 gun = Gun(window, invaders)
-player = Player(window, gun)
+player = Player(window, gun, keys)
 STUFF = [zap, invadersExp, invaders, gun, player]
 
 @window.event
@@ -28,7 +28,7 @@ def update(dt):
     global timeacc
     timeacc += dt
     if timeacc > INTV:
-        for s in STUFF: s.update(keys)
+        for s in STUFF: s.update()
     while timeacc > INTV:
         timeacc -= INTV
     
