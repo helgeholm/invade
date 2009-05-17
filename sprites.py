@@ -134,6 +134,7 @@ class Invaders(object):
         return False
 
     def reduceSizeIfNeeded(self):
+        if not self.COLS: return
         for i_c in [0, -1]:
             if not sum([self.il[i_r][i_c]
                         for i_r in range(self.ROWS)]):
