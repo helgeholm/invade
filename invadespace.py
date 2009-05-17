@@ -10,12 +10,12 @@ window.push_handlers(keys)
 #music = pyglet.resource.media('Hazel - Mip Mip Police.mp3')
 #music.play()
 
-zap = InvaderZap(window)
+shields = Shields(window)
+zap = InvaderZap(window, shields)
 invadersExp = InvaderExplode()
 invaders = Invaders(window, zap, invadersExp)
 gun = Gun(window, invaders)
 player = Player(window, gun, keys)
-shields = Shields(window)
 STUFF = [zap, invadersExp, invaders, gun, player, shields]
 
 @window.event

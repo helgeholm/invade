@@ -34,6 +34,23 @@ class _Shield(object):
                 x = self.x + s_c * self.IW
                 y = self.y - s_r * self.IH
                 if s: s.blit(x, y)
+    def absorb(self, pos, siz):
+        w, h = siz
+        r_x, y = pos
+        x = r_x + w/2
+        for r in self.RC:
+            ry = self.y - r * self.IH
+            if y >= ry + self.IH: continue
+            if y + h < ry: continue
+            for c in self.CC:
+                cx = self.x + c * self.IW
+                if not self.states[r][c]: continue
+                if x < cx: continue
+                if x >= cx + self.IW: continue
+                s = self.states[r][c]
+                self.states[r][c] = min(3, s) - 1
+                return True
+        
         
 class Shields(object):
     def __init__(self, window):
@@ -44,6 +61,11 @@ class Shields(object):
         i_pad = (window.width - 2 * pad - sw) / (num-1)
         self.subs = [_Shield(pad + i_pad*i_x, y)
                      for i_x in range(4)]
+    def absorb(self, pos, siz):
+        for s in self.subs:
+            if s.absorb(pos, siz):
+                return True
+        return False
     def update(self):
         pass
     def paint(self):
@@ -122,19 +144,22 @@ class InvaderExplode(object):
         self.trans(self.sm[self.st]['next'])
 
 class InvaderZap(object):
-    def __init__(self, window):
+    def __init__(self, window, shields):
         self.w = window
         self.s = pyglet.resource.image('zapzap.png')
         self.cx, self.cy = self.s.width/2, 0
         self.xyl = []
+        self.wh = (self.s.width, self.s.height)
+        self.shields = shields
     def fire(self, x, y):
         self.xyl.append([x - self.cx, y - self.cy])
     def update(self):
         xyl2 = []
         for p in self.xyl:
             p[1] -= 10
-            if p[1] > 0:
-                xyl2.append(p)
+            if self.shields.absorb(p, self.wh): continue
+            if p[1] <= 0: continue
+            xyl2.append(p)
         self.xyl = xyl2
     def paint(self):
         for [x, y] in self.xyl:
