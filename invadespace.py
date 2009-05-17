@@ -1,7 +1,7 @@
 import pyglet
 from pyglet.window import key
 
-from sprites import Player, Gun, Invaders, InvaderExplode, InvaderZap
+from sprites import Player, Gun, Invaders, InvaderExplode, InvaderZap, Shields
 
 window = pyglet.window.Window(1024, 768)
 keys = key.KeyStateHandler()
@@ -15,7 +15,8 @@ invadersExp = InvaderExplode()
 invaders = Invaders(window, zap, invadersExp)
 gun = Gun(window, invaders)
 player = Player(window, gun, keys)
-STUFF = [zap, invadersExp, invaders, gun, player]
+shields = Shields(window)
+STUFF = [zap, invadersExp, invaders, gun, player, shields]
 
 @window.event
 def on_draw():

@@ -3,6 +3,53 @@ import random
 import pyglet
 from pyglet.window import key
 
+class _Shield(object):
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+        self.sprites = [
+            None,
+            pyglet.resource.image('shield_dam02.png'),
+            pyglet.resource.image('shield_dam01.png'),
+            pyglet.resource.image('shield_full.png'),
+            pyglet.resource.image('shield_nw.png'),
+            pyglet.resource.image('shield_ne.png'),
+            ]
+        self.states = [
+            [0, 4, 3, 3, 3, 3, 5, 0],
+            [4, 3, 3, 3, 3, 3, 3, 5],
+            [3, 3, 0, 0, 0, 0, 3, 3],
+            [3, 3, 0, 0, 0, 0, 3, 3],
+            ]
+        self.IW = self.sprites[3].width
+        self.IH = self.sprites[3].height
+        self.RC = range(len(self.states))
+        self.CC = range(len(self.states[0]))
+        self.width = len(self.states[0]) * self.IW
+    def update(self):
+        pass
+    def paint(self):
+        for s_r in self.RC:
+            for s_c in self.CC:
+                s = self.sprites[self.states[s_r][s_c]]
+                x = self.x + s_c * self.IW
+                y = self.y - s_r * self.IH
+                if s: s.blit(x, y)
+        
+class Shields(object):
+    def __init__(self, window):
+        sw = _Shield(0, 0).width
+        pad = 128
+        num = 4
+        y = 96
+        i_pad = (window.width - 2 * pad - sw) / (num-1)
+        self.subs = [_Shield(pad + i_pad*i_x, y)
+                     for i_x in range(4)]
+    def update(self):
+        pass
+    def paint(self):
+        for s in self.subs:
+            s.paint()
+
 class Player(object):
     def __init__(self, window, gun, keys):
         self.w = window
