@@ -97,6 +97,7 @@ class Player(object):
         self.g.fire(self.x + (self.s.width/2), self.y + self.s.height)
 
 class Gun(object):
+    COOLDOWN_MAX = 5
     def __init__(self, window, invaders):
         self.w = window
         self.i = invaders
@@ -104,18 +105,22 @@ class Gun(object):
         self.cx, self.cy = self.s.width/2, 0
         self.x, self.y = 0, 0
         self.firing = False
+        self.cooldown = 0
     def bounds(self):
         if not self.firing:
             return None
         return self.x, self.y, self.x + self.s.width, self.y + self.s.height
     def fire(self, x, y):
         if self.firing: return
+        if self.cooldown: return
         self.x = x - self.cx
         self.y = y - self.cy
         self.firing = True
+        self.cooldown = self.COOLDOWN_MAX
     def die(self):
         self.firing = False
     def update(self):
+        if self.cooldown: self.cooldown -= 1
         if not self.firing: return
         self.y += 15
         if self.y > self.w.height:
