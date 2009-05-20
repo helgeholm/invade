@@ -202,6 +202,25 @@ class Invaders(object):
         self.vx = self.iw/4
         self.vy = -self.ih
         self.calcWidth()
+        self.speed = self.calcSpeed()
+        
+    def calcSpeed(self):
+        n = 0
+        for r in xrange(self.ROWS):
+            for c in xrange(self.COLS):
+                if self.il[r][c]:
+                    n += 1
+        if n < 2:
+            return 5
+        if n < 10:
+            return 10
+        if n < 20:
+            return 13
+        if n < 30:
+            return 16
+        if n < 40:
+            return 18
+        return 20
 
     def collide(self, xl, yl, w, h):
         xh, yh = xl + w, yl + h
@@ -218,12 +237,13 @@ class Invaders(object):
                 if self.il[i_r][i_c]:
                     self.il[i_r][i_c] = False
                     self.explode.boom(i_xl, i_yl)
+                    self.speed = self.calcSpeed()
                     self.reduceSizeIfNeeded()
                     return True
         return False
 
     def reduceSizeIfNeeded(self):
-        if not self.COLS: return
+        if not self.COLS * self.ROWS: return
         for i_c in [0, -1]:
             if not sum([self.il[i_r][i_c]
                         for i_r in range(self.ROWS)]):
@@ -256,7 +276,7 @@ class Invaders(object):
         return x, y
 
     def update(self):
-        self.bipcnt = (self.bipcnt + 1)%20
+        self.bipcnt = (self.bipcnt + 1)%self.speed
         if self.bipcnt == 0:
             self.bipbop = (self.bipbop + 1)%2
             self.x += self.vx
