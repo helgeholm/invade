@@ -8,8 +8,8 @@ class _Shield(object):
         self.x, self.y = x, y
         self.sprites = [
             None,
-            pyglet.resource.image('shield_dam02.png'),
-            pyglet.resource.image('shield_dam01.png'),
+            pyglet.resource.image('shield_damlo.png'),
+            pyglet.resource.image('shield_damhi.png'),
             pyglet.resource.image('shield_full.png'),
             pyglet.resource.image('shield_nw.png'),
             pyglet.resource.image('shield_ne.png'),
@@ -34,7 +34,7 @@ class _Shield(object):
                 x = self.x + s_c * self.IW
                 y = self.y - s_r * self.IH
                 if s: s.blit(x, y)
-    def absorb(self, (xl, yl, xh, yh)):
+    def absorb(self, (xl, yl, xh, yh), fromAbove):
         x = (xl + xh) / 2
         for r in self.RC:
             ry = self.y - r * self.IH
@@ -46,7 +46,13 @@ class _Shield(object):
                 if x < cx: continue
                 if x >= cx + self.IW: continue
                 s = self.states[r][c]
-                self.states[r][c] = min(3, s) - 1
+                if s in [1, 2]:
+                    n_s = 0
+                elif s in [3, 4, 5]:
+                    n_s = {True:1,False:2}[fromAbove]
+                else:
+                    assert False
+                self.states[r][c] = n_s
                 return True
         
         
@@ -59,9 +65,9 @@ class Shields(object):
         i_pad = (window.width - 2 * pad - sw) / (num-1)
         self.subs = [_Shield(pad + i_pad*i_x, y)
                      for i_x in range(4)]
-    def absorb(self, bounds):
+    def absorb(self, bounds, fromAbove=True):
         for s in self.subs:
-            if s.absorb(bounds):
+            if s.absorb(bounds, fromAbove):
                 return True
         return False
     def update(self):

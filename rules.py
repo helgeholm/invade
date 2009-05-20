@@ -8,5 +8,5 @@ class Rules:
         pzb = self.pz.bounds()
         if not pzb:
             return
-        if self.s.absorb(pzb):
+        if self.s.absorb(pzb, fromAbove=False):
             self.pz.die()
