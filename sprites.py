@@ -200,7 +200,7 @@ class Invaders(object):
         self.bipcnt = 0
         self.zapcnt = 100
         self.vx = self.iw/4
-        self.vy = -self.ih
+        self.vy = -(self.ih + self.pad)
         self.calcWidth()
         self.speed = self.calcSpeed()
         
@@ -212,6 +212,8 @@ class Invaders(object):
                     n += 1
         if n < 2:
             return 5
+        if n < 5:
+            return 7
         if n < 10:
             return 10
         if n < 20:
