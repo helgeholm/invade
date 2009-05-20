@@ -2,6 +2,7 @@ import pyglet
 from pyglet.window import key
 
 from sprites import Player, Gun, Invaders, InvaderExplode, InvaderZap, Shields
+from rules import Rules
 
 window = pyglet.window.Window(1024, 768)
 keys = key.KeyStateHandler()
@@ -16,6 +17,7 @@ invadersExp = InvaderExplode()
 invaders = Invaders(window, zap, invadersExp)
 gun = Gun(window, invaders)
 player = Player(window, gun, keys)
+rules = Rules(player, gun, shields)
 STUFF = [zap, invadersExp, invaders, gun, player, shields]
 
 @window.event
@@ -30,6 +32,7 @@ def update(dt):
     timeacc += dt
     if timeacc > INTV:
         for s in STUFF: s.update()
+        rules.tick()
     while timeacc > INTV:
         timeacc -= INTV
     

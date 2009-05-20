@@ -34,14 +34,12 @@ class _Shield(object):
                 x = self.x + s_c * self.IW
                 y = self.y - s_r * self.IH
                 if s: s.blit(x, y)
-    def absorb(self, pos, siz):
-        w, h = siz
-        r_x, y = pos
-        x = r_x + w/2
+    def absorb(self, (xl, yl, xh, yh)):
+        x = (xl + xh) / 2
         for r in self.RC:
             ry = self.y - r * self.IH
-            if y >= ry + self.IH: continue
-            if y + h < ry: continue
+            if yl >= ry + self.IH: continue
+            if yh < ry: continue
             for c in self.CC:
                 cx = self.x + c * self.IW
                 if not self.states[r][c]: continue
@@ -61,9 +59,9 @@ class Shields(object):
         i_pad = (window.width - 2 * pad - sw) / (num-1)
         self.subs = [_Shield(pad + i_pad*i_x, y)
                      for i_x in range(4)]
-    def absorb(self, pos, siz):
+    def absorb(self, bounds):
         for s in self.subs:
-            if s.absorb(pos, siz):
+            if s.absorb(bounds):
                 return True
         return False
     def update(self):
@@ -100,11 +98,17 @@ class Gun(object):
         self.cx, self.cy = self.s.width/2, 0
         self.x, self.y = 0, 0
         self.firing = False
+    def bounds(self):
+        if not self.firing:
+            return None
+        return self.x, self.y, self.x + self.s.width, self.y + self.s.height
     def fire(self, x, y):
         if self.firing: return
         self.x = x - self.cx
         self.y = y - self.cy
         self.firing = True
+    def die(self):
+        self.firing = False
     def update(self):
         if not self.firing: return
         self.y += 15
@@ -157,7 +161,8 @@ class InvaderZap(object):
         xyl2 = []
         for p in self.xyl:
             p[1] -= 10
-            if self.shields.absorb(p, self.wh): continue
+            bounds = (p[0], p[1], p[0]+self.s.width, p[1]+self.s.height)
+            if self.shields.absorb(bounds): continue
             if p[1] <= 0: continue
             xyl2.append(p)
         self.xyl = xyl2
