@@ -9,4 +9,4 @@ class Rules:
     def tick(self):
         self.pz.testHit(self.s.absorbFromBelow)
         self.pz.testHit(self.i.collide)
-        self.iz.testHit([self.s.absorbFromAbove])
+        self.iz.testHit([self.s.absorbFromAbove, self.p.isHit])

@@ -82,12 +82,73 @@ class Shields(object):
 class Player(object):
     def __init__(self, window, keys):
         self.w = window
+        self.k = keys
         self.gun = _Gun(window)
+        self.s_alive = _AlivePlayer(window, keys, self.gun)
+        self.s_dead = _DeadPlayer()
+        self.state = self.s_alive
+    def isHit(self, xl, yl, xh, yh):
+        if self.state != self.s_alive: return
+        if self.s_alive.isHit(xl, yl, xh, yh):
+            self.s_dead.init(self.s_alive.x, self.s_alive.y)
+            self.state = self.s_dead
+    def update(self):
+        self.gun.update()
+        if self.state == self.s_dead:
+            if not self.state.stillDead:
+                self.state = self.s_alive
+                self.state.resurrect()
+        self.state.update()
+    def paint(self):
+        self.gun.paint()
+        self.state.paint()
+
+class _DeadPlayer(object):
+    ANIMSPEED = 3
+    def __init__(self):
+        self.anim = [
+            pyglet.resource.image('playermelt01.png'),
+            pyglet.resource.image('playermelt02.png'),
+            pyglet.resource.image('playermelt03.png'),
+            pyglet.resource.image('playermelt04.png'),
+            ]
+        self.a_tick = 0
+        self.a_state = None
+        self.stillDead = None
+        self.x, self.y = 0, 0
+    def init(self, x, y):
+        self.x = x
+        self.y = y
+        self.a_state = 0
+        self.stillDead = 30
+        self.a_tick = self.ANIMSPEED
+    def update(self):
+        if self.stillDead: self.stillDead -= 1
+        if self.a_state == None: return
+        self.a_tick -= 1
+        if self.a_tick: return
+        self.a_tick = self.ANIMSPEED
+        self.a_state += 1
+        if self.a_state >= len(self.anim):
+            self.a_state = None
+            return
+    def paint(self):
+        if self.a_state == None: return
+        self.anim[self.a_state].blit(self.x, self.y)
+    
+class _AlivePlayer(object):
+    def __init__(self, window, keys, gun):
+        self.w = window
+        self.gun = gun
         self.s = pyglet.resource.image('player.png')
         self.x, self.y = self.w.width/2, 4
         self.keys = keys
+        self.invulnerable = 0
+    def resurrect(self):
+        self.invulnerable = 50
     def update(self):
-        self.gun.update()
+        if self.invulnerable:
+            self.invulnerable -= 1
         vx = 0
         if self.keys[key.LEFT]: vx -= 10
         if self.keys[key.RIGHT]: vx += 10
@@ -95,8 +156,19 @@ class Player(object):
         self.x = max(self.x, 0)
         self.x = min(self.x, self.w.width - self.s.width)
         if self.keys[key.SPACE]: self._pewpew()
+    def isHit(self, xl, yl, xh, yh):
+        if self.invulnerable: return False
+        sxh = self.x+self.s.width
+        syh = self.y+self.s.height
+        if yl > syh: return False
+        if yh < self.y: return False
+        if xl > sxh: return False
+        if xh < self.x: return False
+        return True
     def paint(self):
-        self.gun.paint()
+        if self.invulnerable:
+            if (self.invulnerable/5)%2:
+                return
         self.s.blit(self.x, self.y)
     def _pewpew(self):
         self.gun.fire(self.x + (self.s.width/2), self.y + self.s.height)
