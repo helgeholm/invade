@@ -34,7 +34,7 @@ class _Shield(object):
                 x = self.x + s_c * self.IW
                 y = self.y - s_r * self.IH
                 if s: s.blit(x, y)
-    def absorb(self, (xl, yl, xh, yh), fromAbove):
+    def absorb(self, xl, yl, xh, yh, fromAbove):
         x = (xl + xh) / 2
         for r in self.RC:
             ry = self.y - r * self.IH
@@ -55,7 +55,6 @@ class _Shield(object):
                 self.states[r][c] = n_s
                 return True
         
-        
 class Shields(object):
     def __init__(self, window):
         sw = _Shield(0, 0).width
@@ -65,9 +64,13 @@ class Shields(object):
         i_pad = (window.width - 2 * pad - sw) / (num-1)
         self.subs = [_Shield(pad + i_pad*i_x, y)
                      for i_x in range(4)]
-    def absorb(self, bounds, fromAbove=True):
+    def absorbFromAbove(self, xl, yl, xh, yh):
+        return self._absorb(xl, yl, xh, yh, True)
+    def absorbFromBelow(self, xl, yl, xh, yh):
+        return self._absorb(xl, yl, xh, yh, False)
+    def _absorb(self, xl, yl, xh, yh, fromAbove):
         for s in self.subs:
-            if s.absorb(bounds, fromAbove):
+            if s.absorb(xl, yl, xh, yh, fromAbove):
                 return True
         return False
     def update(self):
@@ -77,13 +80,14 @@ class Shields(object):
             s.paint()
 
 class Player(object):
-    def __init__(self, window, gun, keys):
+    def __init__(self, window, keys):
         self.w = window
-        self.g = gun
+        self.gun = _Gun(window)
         self.s = pyglet.resource.image('player.png')
         self.x, self.y = self.w.width/2, 4
         self.keys = keys
     def update(self):
+        self.gun.update()
         vx = 0
         if self.keys[key.LEFT]: vx -= 10
         if self.keys[key.RIGHT]: vx += 10
@@ -92,24 +96,20 @@ class Player(object):
         self.x = min(self.x, self.w.width - self.s.width)
         if self.keys[key.SPACE]: self._pewpew()
     def paint(self):
+        self.gun.paint()
         self.s.blit(self.x, self.y)
     def _pewpew(self):
-        self.g.fire(self.x + (self.s.width/2), self.y + self.s.height)
+        self.gun.fire(self.x + (self.s.width/2), self.y + self.s.height)
 
-class Gun(object):
+class _Gun(object):
     COOLDOWN_MAX = 5
-    def __init__(self, window, invaders):
+    def __init__(self, window):
         self.w = window
-        self.i = invaders
         self.s = pyglet.resource.image('pewpew.png')
         self.cx, self.cy = self.s.width/2, 0
         self.x, self.y = 0, 0
         self.firing = False
         self.cooldown = 0
-    def bounds(self):
-        if not self.firing:
-            return None
-        return self.x, self.y, self.x + self.s.width, self.y + self.s.height
     def fire(self, x, y):
         if self.firing: return
         if self.cooldown: return
@@ -117,8 +117,6 @@ class Gun(object):
         self.y = y - self.cy
         self.firing = True
         self.cooldown = self.COOLDOWN_MAX
-    def die(self):
-        self.firing = False
     def update(self):
         if self.cooldown: self.cooldown -= 1
         if not self.firing: return
@@ -126,13 +124,15 @@ class Gun(object):
         if self.y > self.w.height:
             self.firing = False
             return
-        if self.i.collide(self.x, self.y, self.s.width, self.s.height):
+    def testHit(self, hitFun):
+        if not self.firing: return
+        if hitFun(self.x, self.y, self.x+self.s.width, self.y+self.s.height):
             self.firing = False
     def paint(self):
         if not self.firing: return
         self.s.blit(self.x, self.y)
 
-class InvaderExplode(object):
+class _InvaderExplode(object):
     def __init__(self):
         s = [pyglet.resource.image('invaderexplode0.png'),
              pyglet.resource.image('invaderexplode1.png')]
@@ -158,23 +158,28 @@ class InvaderExplode(object):
         if self.st_c: return
         self.trans(self.sm[self.st]['next'])
 
-class InvaderZap(object):
-    def __init__(self, window, shields):
+class _InvaderZap(object):
+    def __init__(self, window):
         self.w = window
         self.s = pyglet.resource.image('zapzap.png')
         self.cx, self.cy = self.s.width/2, 0
         self.xyl = []
         self.wh = (self.s.width, self.s.height)
-        self.shields = shields
     def fire(self, x, y):
         self.xyl.append([x - self.cx, y - self.cy])
     def update(self):
+        for p in self.xyl: p[1] -= 10
+        self.xyl = [p for p in self.xyl if p[1] > -self.s.height]
+    def testHit(self, hitFuns):
+        def oneHit(bounds, funs):
+            for f in funs:
+                if f(*bounds): return True
+            return False
         xyl2 = []
         for p in self.xyl:
-            p[1] -= 10
-            bounds = (p[0], p[1], p[0]+self.s.width, p[1]+self.s.height)
-            if self.shields.absorb(bounds): continue
-            if p[1] <= 0: continue
+            bounds = p[0], p[1], p[0]+self.s.width, p[1]+self.s.height
+            if oneHit(bounds, hitFuns):
+                continue # shot absorbed
             xyl2.append(p)
         self.xyl = xyl2
     def paint(self):
@@ -182,12 +187,12 @@ class InvaderZap(object):
             self.s.blit(x, y)
 
 class Invaders(object):
-    def __init__(self, window, zap, invadersExp):
-        self.explode = invadersExp
+    def __init__(self, window):
+        self.w = window
         self.ROWS = 6
         self.COLS = 8
-        self.zap = zap
-        self.w = window
+        self.explode = _InvaderExplode()
+        self.zap = _InvaderZap(window)
         self.invader0 = [
             pyglet.resource.image('invader01.png'),
             pyglet.resource.image('invader02.png')]
@@ -224,8 +229,7 @@ class Invaders(object):
             return 18
         return 20
 
-    def collide(self, xl, yl, w, h):
-        xh, yh = xl + w, yl + h
+    def collide(self, xl, yl, xh, yh):
         for i_r in xrange(self.ROWS):
             i_yl = self.y - (self.ih + self.pad) * i_r
             i_yh = i_yl + self.ih
@@ -278,6 +282,8 @@ class Invaders(object):
         return x, y
 
     def update(self):
+        self.explode.update()
+        self.zap.update()
         self.bipcnt = (self.bipcnt + 1)%self.speed
         if self.bipcnt == 0:
             self.bipbop = (self.bipbop + 1)%2
@@ -302,6 +308,8 @@ class Invaders(object):
             x, y = self.pos(row, col)
             s = self.invader0[self.bipbop]
             s.blit(x, y)
+        self.explode.paint()
+        self.zap.paint()
         for ir in xrange(len(self.il)):
             row = self.il[ir]
             for ic in xrange(len(row)):

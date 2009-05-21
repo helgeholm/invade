@@ -1,7 +1,7 @@
 import pyglet
 from pyglet.window import key
 
-from sprites import Player, Gun, Invaders, InvaderExplode, InvaderZap, Shields
+from sprites import Player, Invaders, Shields
 from rules import Rules
 
 window = pyglet.window.Window(1024, 768)
@@ -12,13 +12,10 @@ window.push_handlers(keys)
 #music.play()
 
 shields = Shields(window)
-zap = InvaderZap(window, shields)
-invadersExp = InvaderExplode()
-invaders = Invaders(window, zap, invadersExp)
-gun = Gun(window, invaders)
-player = Player(window, gun, keys)
-rules = Rules(player, gun, shields)
-STUFF = [zap, invadersExp, invaders, gun, player, shields]
+invaders = Invaders(window)
+player = Player(window, keys)
+rules = Rules(player, player.gun, shields, invaders, invaders.zap)
+STUFF = [invaders, player, shields]
 
 @window.event
 def on_draw():
