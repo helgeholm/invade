@@ -7,7 +7,6 @@ class Rules:
         self.iz = invadersZap
 
     def tick(self):
-        # player gun hit
         self.pz.testHit(self.s.absorbFromBelow)
         self.pz.testHit(self.i.collide)
         self.iz.testHit([self.s.absorbFromAbove])
