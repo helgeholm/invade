@@ -1,3 +1,5 @@
+import sys
+
 import pyglet
 from pyglet.window import key
 
@@ -22,18 +24,26 @@ def on_draw():
     window.clear()
     for s in STUFF: s.paint()
 
-timeacc = 0
-INTV = 0.02
-def update(dt):
-    global timeacc
-    timeacc += dt
-    if timeacc > INTV:
-        for s in STUFF: s.update()
-        rules.tick()
-    while timeacc > INTV:
-        timeacc -= INTV
+DEBUGCOUNT = 300
+def profileRun(dt):
+    global DEBUGCOUNT
+    if not DEBUGCOUNT:
+        pyglet.app.exit()
+    DEBUGCOUNT -= 1
+    return normalRun(dt)
     
+def normalRun(dt):
+    for s in STUFF: s.update()
+    rules.tick()
 
-pyglet.clock.schedule(update)
+profileMode = (sys.argv+[0])[1] == 'debug'
 
-pyglet.app.run()
+if profileMode:
+    pyglet.clock.set_fps_limit(1000)
+    pyglet.clock.schedule(profileRun)
+    import cProfile
+    cProfile.run('pyglet.app.run()', sort=1) # sort by tottime
+else:
+    pyglet.clock.set_fps_limit(50)
+    pyglet.clock.schedule(normalRun)
+    pyglet.app.run()
