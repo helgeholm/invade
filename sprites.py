@@ -79,32 +79,6 @@ class Shields(object):
         for s in self.subs:
             s.paint()
 
-class Player(object):
-    def __init__(self, window, keys):
-        self.w = window
-        self.k = keys
-        self.gun = _Gun(window)
-        self.s_alive = _AlivePlayer(window, keys, self.gun)
-        self.s_dead = _DeadPlayer()
-        self.state = self.s_alive
-    def isHit(self, xl, yl, xh, yh):
-        if self.state != self.s_alive: return None
-        if self.s_alive.isHit(xl, yl, xh, yh):
-            self.s_dead.init(self.s_alive.x, self.s_alive.y)
-            self.state = self.s_dead
-            return self
-        return None
-    def update(self):
-        self.gun.update()
-        if self.state == self.s_dead:
-            if not self.state.stillDead:
-                self.state = self.s_alive
-                self.state.resurrect()
-        self.state.update()
-    def paint(self):
-        self.gun.paint()
-        self.state.paint()
-
 class Lives(object):
     PAD_OUTER = 3
     PAD_INNER = 1
@@ -121,6 +95,51 @@ class Lives(object):
         pass
     def loseOne(self):
         self.count -= 1
+
+class Player(object):
+    def __init__(self, window, keys):
+        self.w = window
+        self.k = keys
+        self.gun = _Gun(window)
+        self.s_alive = _AlivePlayer(window, keys, self.gun)
+        self.s_dead = _DeadPlayer()
+        self.state = self.s_alive
+    def isHit(self, xl, yl, xh, yh):
+        if self.state != self.s_alive: return None
+        if self.s_alive.isHit(xl, yl, xh, yh):
+            self.s_dead.init(self.s_alive.x, self.s_alive.y)
+            self.state = self.s_dead
+            return self
+        return None
+    def testGunHit(self, hitFuns):
+        self.gun.testHit(hitFuns)
+    def update(self):
+        self.gun.update()
+        if self.state == self.s_dead:
+            if not self.state.stillDead:
+                self.state = self.s_alive
+                self.state.resurrect()
+        self.state.update()
+    def paint(self):
+        self.gun.paint()
+        self.state.paint()
+
+class LostPlayer(object):
+    def __init__(self, origPlayer):
+        if origPlayer.state == origPlayer.s_alive:
+            self.state = origPlayer.s_dead
+            self.state.init(self.origPlayer.s_alive.x,
+                            self.origPlayer.s_alive.y)
+        else:
+            self.state = origPlayer.s_dead
+    def isHit(self, xl, yl, xh, yh):
+        return None
+    def testGunHit(self, hitFuns):
+        pass
+    def update(self):
+        self.state.update()
+    def paint(self):
+        self.state.paint()
 
 class _DeadPlayer(object):
     ANIMSPEED = 3
@@ -299,6 +318,7 @@ class Invaders(object):
         self.vy = -(self.ih + self.pad)
         self.calcWidth()
         self.speed = self.calcSpeed()
+        self.moving = True
         
     def calcSpeed(self):
         n = 0
@@ -378,11 +398,12 @@ class Invaders(object):
         self.bipcnt = (self.bipcnt + 1)%self.speed
         if self.bipcnt == 0:
             self.bipbop = (self.bipbop + 1)%2
-            self.x += self.vx
-            if (self.x + self.totWidth > self.w.width) or (self.x < 0):
-                self.vx *= -1
+            if self.moving:
                 self.x += self.vx
-                self.y += self.vy
+                if (self.x + self.totWidth > self.w.width) or (self.x < 0):
+                    self.vx *= -1
+                    self.x += self.vx
+                    self.y += self.vy
         self.zapcnt -= 1
         if self.zapcnt == 0:
             self.zapcnt = random.randrange(10, 120)
@@ -405,3 +426,18 @@ class Invaders(object):
             row = self.il[ir]
             for ic in xrange(len(row)):
                 row[ic] and paintOne(ir, ic)
+
+class GameOver(object):
+    def __init__(self, window):
+        self.lbl = pyglet.text.Label(
+            'GAME OVER',
+            font_name="sans",
+            font_size=24,
+            x=window.width//2,
+            y=window.height//2,
+            anchor_x="center",
+            anchor_y="center") 
+    def update(self):
+        pass
+    def paint(self):
+        self.lbl.draw()
