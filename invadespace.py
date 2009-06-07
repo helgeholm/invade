@@ -18,7 +18,10 @@ state = StatePlay(window, keys)
 def on_draw():
     global state
     window.clear()
-    for s in state.visibleStuff(): s.paint()
+    for s in state.visibleStuff():
+        if not hasattr(s, 'paint'):
+            raise Exception('Got unpaintable object "%s" from visibleStuff from state %s.'%(repr(s), repr(state)))
+        s.paint()
 
 timeacc = 0
 INTV = 0.02
@@ -27,7 +30,10 @@ def normalRun(dt):
     global timeacc
     timeacc += dt
     if timeacc > INTV:
-        state = state.update()
+        nextState = state.update()
+        if not nextState:
+            raise Exception('State "%s" returned bad new state %s.'%(state, nextState))
+        state = nextState
     while timeacc > INTV:
         timeacc -= INTV
 

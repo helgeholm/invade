@@ -359,6 +359,12 @@ class Invaders(object):
                     return True
         return False
 
+    def allDead(self):
+        return not self.COLS
+
+    def removeZaps(self):
+        self.zaps = _InvaderZap(self.w)
+
     def reduceSizeIfNeeded(self):
         for i_c in [0, -1]:
             if not self.COLS: return
@@ -427,17 +433,48 @@ class Invaders(object):
             for ic in xrange(len(row)):
                 row[ic] and paintOne(ir, ic)
 
+GAMEOVER_LABEL = pyglet.text.Label(
+    'GAME OVER',
+    font_name="sans",
+    font_size=24,
+    x=0, # set later
+    y=0, # set later
+    anchor_x="center",
+    anchor_y="center") 
 class GameOver(object):
     def __init__(self, window):
-        self.lbl = pyglet.text.Label(
-            'GAME OVER',
-            font_name="sans",
-            font_size=24,
-            x=window.width//2,
-            y=window.height//2,
-            anchor_x="center",
-            anchor_y="center") 
+        self.lbl = GAMEOVER_LABEL
+        self.lbl.x = window.width//2
+        self.lbl.y = window.height//2
     def update(self):
         pass
     def paint(self):
         self.lbl.draw()
+
+def _lblAtSize(size):
+    return pyglet.text.Label(
+        'YAY YOU!',
+        font_name="sans",
+        font_size=size,
+        x=0, # set later
+        y=0, # set later
+        anchor_x="center",
+        anchor_y="center")
+YAY_LABELS = map(_lblAtSize, range(0, 100, 5)) 
+class YayYou(object):
+    def __init__(self, window):
+        self.lbls = YAY_LABELS[:]
+        for lbl in self.lbls:
+            lbl.x = window.width // 2
+            lbl.y = window.height // 2
+        self.fullYayWait = 60
+        self.done = False
+    def update(self):
+        if len(self.lbls) > 1:
+            self.lbls.pop(0)
+            return
+        if self.fullYayWait:
+            self.fullYayWait -= 1
+        self.done = not self.fullYayWait
+    def paint(self):
+        self.lbls[0].draw()

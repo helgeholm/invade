@@ -1,4 +1,4 @@
-from sprites import Player, LostPlayer, Invaders, Shields, Lives, GameOver
+from sprites import Player, LostPlayer, Invaders, Shields, Lives, GameOver, YayYou
 
 class State(object):
     def __init__(self, window, keys, prevState=None):
@@ -18,20 +18,39 @@ def runHitTests(s):
 
 class StatePlay(State):
     def postInit(self, prevStuff):
-        self.s = {
-            'shields': Shields(self.window),
-            'invaders': Invaders(self.window),
-            'player': Player(self.window, self.keys),
-            'lives': Lives(self.window),
-            }
+        if prevStuff:
+            self.s = prevStuff
+        else:
+            self.s = {
+                'shields': Shields(self.window),
+                'player': Player(self.window, self.keys),
+                'lives': Lives(self.window),
+                }
+        self.s['invaders'] = Invaders(self.window)
     def update(self):
         for s in self.s.values(): s.update()
         runHitTests(self.s)
         if self.s['lives'].count < 0:
             return self.goto(StateLose, self.s)
+        if self.s['invaders'].allDead():
+            return self.goto(StateNextLevel, self.s)
         return self
     def visibleStuff(self):
         return self.s.values()
+
+class StateNextLevel(State):
+    def postInit(self, prevStuff):
+        self.s = prevStuff
+        self.s['invaders'].removeZaps()
+        self.yay = YayYou(self.window)
+    def update(self):
+        self.yay.update()
+        self.s['invaders'].update()
+        if self.yay.done:
+            return self.goto(StatePlay, self.s)
+        return self
+    def visibleStuff(self):
+        return self.s.values() + [self.yay]
 
 class StateLose(State):
     def postInit(self, prevStuff):
