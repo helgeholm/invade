@@ -71,8 +71,8 @@ class Shields(object):
     def _absorb(self, xl, yl, xh, yh, fromAbove):
         for s in self.subs:
             if s.absorb(xl, yl, xh, yh, fromAbove):
-                return True
-        return False
+                return self
+        return None
     def update(self):
         pass
     def paint(self):
@@ -88,10 +88,12 @@ class Player(object):
         self.s_dead = _DeadPlayer()
         self.state = self.s_alive
     def isHit(self, xl, yl, xh, yh):
-        if self.state != self.s_alive: return
+        if self.state != self.s_alive: return None
         if self.s_alive.isHit(xl, yl, xh, yh):
             self.s_dead.init(self.s_alive.x, self.s_alive.y)
             self.state = self.s_dead
+            return self
+        return None
     def update(self):
         self.gun.update()
         if self.state == self.s_dead:
@@ -243,17 +245,17 @@ class _InvaderZap(object):
         for p in self.xyl: p[1] -= 10
         self.xyl = [p for p in self.xyl if p[1] > -self.s.height]
     def testHit(self, hitFuns):
-        def oneHit(bounds, funs):
-            for f in funs:
-                if f(*bounds): return True
-            return False
+        hitItems = []
         xyl2 = []
         for p in self.xyl:
             bounds = p[0], p[1], p[0]+self.s.width, p[1]+self.s.height
-            if oneHit(bounds, hitFuns):
+            hit = reduce(lambda a, f: a or f(*bounds), hitFuns, None)
+            if hit:
+                hitItems.append(hit)
                 continue # shot absorbed
             xyl2.append(p)
         self.xyl = xyl2
+        return hitItems
     def paint(self):
         for [x, y] in self.xyl:
             self.s.blit(x, y)
