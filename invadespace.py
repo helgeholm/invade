@@ -1,7 +1,7 @@
 import pyglet
 from pyglet.window import key
 
-from sprites import Player, Invaders, Shields
+from sprites import Player, Invaders, Shields, Lives
 from rules import Rules
 
 window = pyglet.window.Window(1024, 768)
@@ -14,8 +14,9 @@ window.push_handlers(keys)
 shields = Shields(window)
 invaders = Invaders(window)
 player = Player(window, keys)
-rules = Rules(player, player.gun, shields, invaders, invaders.zap)
-STUFF = [invaders, player, shields]
+lives = Lives(window)
+rules = Rules(player, player.gun, shields, invaders, invaders.zap, lives)
+STUFF = [invaders, player, shields, lives]
 
 @window.event
 def on_draw():

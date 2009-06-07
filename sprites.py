@@ -105,6 +105,23 @@ class Player(object):
         self.gun.paint()
         self.state.paint()
 
+class Lives(object):
+    PAD_OUTER = 3
+    PAD_INNER = 1
+    def __init__(self, window):
+        self.liferepr = pyglet.resource.image('playerlife.png')
+        self.count = 3
+        self.x = window.width - (self.PAD_OUTER + self.liferepr.width)
+        self.y = window.height - (self.PAD_OUTER + self.liferepr.height)
+    def paint(self):
+        for i in range(self.count):
+            x = self.x - i * (self.PAD_INNER + self.liferepr.width)
+            self.liferepr.blit(x, self.y)
+    def update(self):
+        pass
+    def loseOne(self):
+        self.count -= 1
+
 class _DeadPlayer(object):
     ANIMSPEED = 3
     def __init__(self):
