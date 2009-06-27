@@ -15,7 +15,8 @@ def runHitTests(s):
         [s['shields'].absorbFromAbove, s['player'].isHit])
     if s['player'] in hit:
         s['lives'].loseOne()
-
+    s['shields'].melt(s['invaders'].bottomBoundary)
+    
 class StatePlay(State):
     def postInit(self, prevStuff):
         if prevStuff:
@@ -39,6 +40,8 @@ class StatePlay(State):
             return self.goto(StateLose, self.s)
         if self.s['invaders'].allDead():
             return self.goto(StateNextLevel, self.s)
+        if self.s['invaders'].reachedBottom():
+            return self.goto(StateLose, self.s)
         return self
     def visibleStuff(self):
         return self.paintOrder

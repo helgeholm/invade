@@ -34,6 +34,15 @@ class _Shield(object):
                 x = self.x + s_c * self.IW
                 y = self.y - s_r * self.IH
                 if s: s.blit(x, y)
+    def _reducedState(self, s, fromAbove):
+        if s in [1, 2]:
+            return 0
+        elif s in [3, 4, 5]:
+            return {True:1,False:2}[fromAbove]
+        else:
+            assert False
+    def top(self):
+        return self.y + self.IH
     def absorb(self, xl, yl, xh, yh, fromAbove):
         x = (xl + xh) / 2
         for r in self.RC:
@@ -46,14 +55,26 @@ class _Shield(object):
                 if x < cx: continue
                 if x >= cx + self.IW: continue
                 s = self.states[r][c]
-                if s in [1, 2]:
-                    n_s = 0
-                elif s in [3, 4, 5]:
-                    n_s = {True:1,False:2}[fromAbove]
-                else:
-                    assert False
-                self.states[r][c] = n_s
+                self.states[r][c] = self._reducedState(s, fromAbove)
                 return True
+    def height(self):
+        return self.IH * len(self.RC)
+    def bitHeight(self):
+        return self.IH
+    def melt(self, invaderInvasionY):
+        anythingMelted = False
+        row = invaderInvasionY // self.IH
+        if row < 0:
+            return anythingMelted
+        if row > len(self.states):
+            row = len(self.states)
+        for i_r in xrange(row):
+            for i_c in self.CC:
+                s = self.states[i_r][i_c]
+                if s:
+                    anythingMelted = True
+                    self.states[i_r][i_c] = self._reducedState(s, True)
+        return anythingMelted
         
 class Shields(object):
     def __init__(self, window):
@@ -64,6 +85,17 @@ class Shields(object):
         i_pad = (window.width - 2 * pad - sw) / (num-1)
         self.subs = [_Shield(pad + i_pad*i_x, y)
                      for i_x in range(4)]
+        self.top = self.subs[0].top()
+        self.nextMelt = self.top
+    def melt(self, invaderheight):
+        anythingMelted = False
+        if invaderheight < self.nextMelt:
+            for s in self.subs:
+                if s.melt(self.top - invaderheight):
+                    anythingMelted = True
+            if not anythingMelted:
+                self.nextMelt -= self.subs[0].bitHeight()
+        return anythingMelted
     def absorbFromAbove(self, xl, yl, xh, yh):
         return self._absorb(xl, yl, xh, yh, True)
     def absorbFromBelow(self, xl, yl, xh, yh):
@@ -84,7 +116,7 @@ class Lives(object):
     PAD_INNER = 1
     def __init__(self, window):
         self.liferepr = pyglet.resource.image('playerlife.png')
-        self.count = 3
+        self.count = 2
         self.x = window.width - (self.PAD_OUTER + self.liferepr.width)
         self.y = window.height - (self.PAD_OUTER + self.liferepr.height)
     def paint(self):
@@ -130,8 +162,8 @@ class LostPlayer(object):
     def __init__(self, origPlayer):
         if origPlayer.state == origPlayer.s_alive:
             self.state = origPlayer.s_dead
-            self.state.init(self.origPlayer.s_alive.x,
-                            self.origPlayer.s_alive.y)
+            self.state.init(origPlayer.s_alive.x,
+                            origPlayer.s_alive.y)
         else:
             self.state = origPlayer.s_dead
     def isHit(self, xl, yl, xh, yh):
@@ -321,7 +353,19 @@ class Invaders(object):
         self.vy = -(self.ih + self.pad)
         self.calcWidth()
         self.speed = self.calcSpeed()
+        self.bottomBoundary = self.calcBottomBoundary()
         self.moving = True
+
+    def reachedBottom(self):
+        return self.bottomBoundary <= 0
+
+    def calcBottomBoundary(self):
+        bott = -1
+        for i_r in xrange(len(self.il)):
+             if max(self.il[i_r]):
+                 bott = i_r
+        _, y = self.pos(bott, 0)
+        return y
         
     def calcSpeed(self):
         def getDiffCurve():
@@ -373,6 +417,7 @@ class Invaders(object):
                     self.il[i_r][i_c] = False
                     self.explode.boom(i_xl, i_yl)
                     self.speed = self.calcSpeed()
+                    self.bottomBoundary = self.calcBottomBoundary()
                     self.reduceSizeIfNeeded()
                     return True
         return False
@@ -428,6 +473,7 @@ class Invaders(object):
                     self.vx *= -1
                     self.x += self.vx
                     self.y += self.vy
+                    self.bottomBoundary = self.calcBottomBoundary()
         self.zapcnt -= 1
         if self.zapcnt == 0:
             self.zapcnt = random.randrange(10, 120)
