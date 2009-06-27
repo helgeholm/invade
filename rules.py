@@ -1,4 +1,4 @@
-from sprites import Player, LostPlayer, Invaders, Shields, Lives, GameOver, YayYou
+from sprites import Player, LostPlayer, Invaders, Shields, Lives, GameOver, YayYou, Level
 
 class State(object):
     def __init__(self, window, keys, prevState=None):
@@ -25,8 +25,13 @@ class StatePlay(State):
                 'shields': Shields(self.window),
                 'player': Player(self.window, self.keys),
                 'lives': Lives(self.window),
+                'level': Level(self.window),
                 }
-        self.s['invaders'] = Invaders(self.window)
+        self.s['invaders'] = Invaders(self.window, self.s['level'].value)
+        self.paintOrder = self.s.values()
+        # move level to end of order - yes, it works
+        self.paintOrder.append(self.s['level'])
+        self.paintOrder.remove(self.s['level'])
     def update(self):
         for s in self.s.values(): s.update()
         runHitTests(self.s)
@@ -36,16 +41,21 @@ class StatePlay(State):
             return self.goto(StateNextLevel, self.s)
         return self
     def visibleStuff(self):
-        return self.s.values()
+        return self.paintOrder
 
 class StateNextLevel(State):
     def postInit(self, prevStuff):
         self.s = prevStuff
         self.s['invaders'].removeZaps()
-        self.yay = YayYou(self.window)
+        self.yay = YayYou(self.window, self. s['level'].value)
+        self.s['level'].up()
+        self.livesUpped = False
     def update(self):
         self.yay.update()
         self.s['invaders'].update()
+        if self.yay.halfDone and not self.livesUpped:
+            self.s['lives'].upOne()
+            self.livesUpped = True
         if self.yay.done:
             return self.goto(StatePlay, self.s)
         return self

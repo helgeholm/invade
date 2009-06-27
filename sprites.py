@@ -93,6 +93,8 @@ class Lives(object):
             self.liferepr.blit(x, self.y)
     def update(self):
         pass
+    def upOne(self):
+        self.count += 1
     def loseOne(self):
         self.count -= 1
 
@@ -297,8 +299,9 @@ class _InvaderZap(object):
             self.s.blit(x, y)
 
 class Invaders(object):
-    def __init__(self, window):
+    def __init__(self, window, diffLevel):
         self.w = window
+        self.diffLevel = diffLevel
         self.ROWS = 6
         self.COLS = 8
         self.explode = _InvaderExplode()
@@ -321,24 +324,39 @@ class Invaders(object):
         self.moving = True
         
     def calcSpeed(self):
+        def getDiffCurve():
+            if self.diffLevel > 12:
+                return [1, 2,  3,  4,  5,  6,  7]
+            if self.diffLevel > 8:
+                return [1, 2,  4,  5,  6,  8, 10]
+            if self.diffLevel > 6:
+                return [2, 4,  5,  6,  8, 10, 13]
+            if self.diffLevel > 4:
+                return [3, 5,  6,  8, 10, 13, 16]
+            if self.diffLevel > 1:
+                return [4, 6,  8, 10, 13, 16, 18]
+            else:
+                return [5, 7, 10, 13, 16, 18, 20]
+        speeds = getDiffCurve()
         n = 0
         for r in xrange(self.ROWS):
             for c in xrange(self.COLS):
                 if self.il[r][c]:
                     n += 1
         if n < 2:
-            return 5
+            return speeds[0]
         if n < 5:
-            return 7
+            return speeds[1]
         if n < 10:
-            return 10
+            return speeds[2]
         if n < 20:
-            return 13
+            return speeds[3]
         if n < 30:
-            return 16
+            return speeds[4]
         if n < 40:
-            return 18
-        return 20
+            return speeds[5]
+        else:
+            return speeds[6]
 
     def collide(self, xl, yl, xh, yh):
         for i_r in xrange(self.ROWS):
@@ -363,7 +381,7 @@ class Invaders(object):
         return not self.COLS
 
     def removeZaps(self):
-        self.zaps = _InvaderZap(self.w)
+        self.zap = _InvaderZap(self.w)
 
     def reduceSizeIfNeeded(self):
         for i_c in [0, -1]:
@@ -451,30 +469,80 @@ class GameOver(object):
     def paint(self):
         self.lbl.draw()
 
-def _lblAtSize(size):
-    return pyglet.text.Label(
-        'YAY YOU!',
-        font_name="sans",
-        font_size=size,
-        x=0, # set later
-        y=0, # set later
-        anchor_x="center",
-        anchor_y="center")
-YAY_LABELS = map(_lblAtSize, range(0, 100, 5)) 
-class YayYou(object):
+class Level(object):
     def __init__(self, window):
-        self.lbls = YAY_LABELS[:]
-        for lbl in self.lbls:
-            lbl.x = window.width // 2
-            lbl.y = window.height // 2
+        self.window = window
+        self.value = 1
+        self.lbl = self.mkLbl()
         self.fullYayWait = 60
         self.done = False
+    def mkLbl(self):
+        color = (255, 255, 255, 255)
+        shinies = '%s'
+        if self.value >= 2:
+            shinies = shinies%'-%s-'
+        if self.value >= 4:
+            shinies = shinies%'=%s='
+        if self.value >= 6:
+            shinies = shinies%'<%s>'
+        if self.value >= 8:
+            shinies = shinies%'*%s*'
+        if self.value >= 10:
+            shinies = shinies%'>%s<'
+        if self.value >= 12:
+            shinies = shinies%'{%s}'
+        if self.value >= 14:
+            shinies = shinies%'~%s~'
+        if self.value >= 16:
+            shinies = shinies%'_%s_'
+        if self.value >= 18:
+            shinies = shinies%'/%s\\'
+        if self.value >= 20:
+            shinies = shinies%' %s '
+            color = (238, 201, 0, 255) # gold!
+        return pyglet.text.Label(
+            shinies%('LEVEL %d'%self.value),
+            font_name="sans",
+            font_size=15,
+            x=self.window.width // 2,
+            y=self.window.height,
+            anchor_x="center",
+            anchor_y="top",
+            color=color)
+    def up(self):
+        self.value += 1
+        self.lbl = self.mkLbl()
     def update(self):
-        if len(self.lbls) > 1:
-            self.lbls.pop(0)
-            return
-        if self.fullYayWait:
-            self.fullYayWait -= 1
-        self.done = not self.fullYayWait
+        pass
     def paint(self):
-        self.lbls[0].draw()
+        self.lbl.draw()
+
+def _mkYayLbl(level):
+    return pyglet.text.Label(
+        'YOU BEAT LEVEL %d'%level,
+        font_name="sans",
+        font_size=50,
+        x=0, # window.width // 2 later
+        y=0, # window.height // 2 later
+        anchor_x="center",
+        anchor_y="center")
+_YAY_LABELS = [_mkYayLbl(n) for n in xrange(20)]
+class YayYou(object):
+    def __init__(self, window, level):
+        global _YAY_LABELS
+        while level >= len(_YAY_LABELS):
+            _YAY_LABELS.extend([_mkYayLbl(n) for n in xrange(len(_YAY_LABELS), len(_YAY_LABELS)+10)])
+        self.lbl = _YAY_LABELS[level]
+        self.lbl.x = window.width // 2
+        self.lbl.y = window.height // 2
+        self.countdown = 60
+        self.halfcountdown = self.countdown // 2
+        self.done = False
+        self.halfDone = False
+    def update(self):
+        if self.countdown:
+            self.countdown -= 1
+        self.halfDone = self.countdown > self.halfcountdown
+        self.done = not self.countdown
+    def paint(self):
+        self.lbl.draw()
